@@ -1,1 +1,5 @@
-data/
+# data/ — intentionally tracked (anonymised dataset for public replication)
+venv/
+__pycache__/
+*.pyc
+.env

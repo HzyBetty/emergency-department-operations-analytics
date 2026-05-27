@@ -1,95 +1,145 @@
-# 🏥 ED Triage Lead Decision Support Tool
+# ED Flow Intelligence — Emergency Department Process Mining & Analytics Platform
 
-**Project Overview** This repository contains the **ED Triage Lead Decision Support Tool**, an AI-assisted process mining and predictive analytics application designed specifically for Emergency Department (ED) operations. The tool transforms raw, noisy event logs into actionable, real-time insights—empowering Triage Leads to optimize patient flow, monitor safety protocols, and simulate operational changes.
-
-Developed as part of a **Master of Management Analytics (MMA)** program, this tool integrates Python, Streamlit, and advanced network analysis to solve the "Black Box" of ED throughput.
+An interactive analytics dashboard that transforms raw ED event logs into actionable operational intelligence. Built with Python and Streamlit, it applies **process mining**, **machine learning**, and **stochastic simulation** to help healthcare operations teams reduce patient Length of Stay (LOS), improve protocol compliance, and forecast inpatient demand.
 
 ---
 
-## 🧠 Core Methodology: Visit-Atomic Isolation
-Unlike traditional analytics that may be skewed by repeat visitors or system errors, this tool features a custom **Isolation Engine**:
-* **The 24-Hour Rule:** Automatically partitions patient data into distinct clinical encounters if a gap of 24+ hours is detected.
-* **Start-Event Enforcement:** Forces a new "Visit ID" upon arrival events (e.g., Ambulance Arrival, Triage), eliminating "ghost transitions" (e.g., linking a discharge from last month to a triage from today) and ensuring bottleneck calculations are accurate to the minute.
+## Business Problem
+
+Emergency Departments generate high-volume, noisy event logs that are rarely used for real-time operational decisions. This platform bridges that gap by converting raw timestamped activity data into three categories of insight:
+
+| Category | Output |
+|---|---|
+| **Process visibility** | Where patients go, how long each step takes, and where flow breaks down |
+| **Risk stratification** | Which patients are likely to be admitted — before bed demand peaks |
+| **Capacity planning** | How targeted efficiency improvements shift LOS distributions and reduce operational cost |
 
 ---
 
-## 🧑‍💻 Target User Persona
+## Key Features
 
-**Triage Lead** – Responsible for managing patient inflow and preventing overcrowding.  
-* **Need:** Actionable insights that translate "Data Science" into "Bed Management."
-* **Goal:** Minimize "Left Without Being Seen" (LWBS) rates and optimize clinical throughput.
+### 📊 Executive Overview
+- Five operational KPIs calculated from raw event data: **Total Visits, Median LOS, Admission Rate, LWBS Rate, and Median Door-to-Triage Time**
+- System status banner (Optimal / Elevated / Critical) driven by median LOS thresholds
+- LOS distribution by triage level (box plot) — shows acuity-specific variance, not just averages
+- Admission and LWBS rates broken down by triage level for targeted prioritisation
+- Visit volume by day of week for staffing rotation planning
 
----
+### 🔀 Patient Flow & Bottlenecks
+- **Sankey diagram**: maps actual patient pathways with link width proportional to volume. Red branches to "Left ED" directly visualise LWBS volume.
+- **Step-level delay ranking**: top transitions sorted by average wait time, with 90th-percentile column to capture tail-risk delays
+- **Door-to-Triage vs. CTAS Benchmarks**: median performance overlaid against Canadian Triage and Acuity Scale targets. Green = compliant, Red = accreditation gap.
 
-## ⚙️ Technical Requirements
+### 🤖 Risk & Admission Analytics
+- **Random Forest classifier** trained on six patient and pathway features. Reports AUC-ROC for transparency.
+- **Feature importance chart**: identifies which factors most strongly predict admission (triage level, pathway complexity, age, arrival hour, zone, gender)
+- **High-risk visit flag list**: patients with predicted admission probability ≥ 70%, enabling proactive bed booking 4–6 hours ahead
+- **Zone load vs. LOS efficiency**: volume and median LOS by physical zone — targets for nurse redeployment
 
-* **Python Version:** 3.9+
-* **Framework:** Streamlit
-* **Key Libraries:** `pandas`, `numpy`, `plotly`, `scikit-learn`, `networkx`, `scipy`
-* **Data Structure:** `.csv` file with columns: `patient_id`, `timestamp`, `event`, `triage_code`, `initial_zone`, `disposition_desc`, `age`, `gender`.
-
----
-
-## 🚀 Installation & Usage
-
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/HzyBetty/project_process_mining.git](https://github.com/HzyBetty/project_process_mining.git)
-   cd project_process_mining
-   ```
-2. **Create a virtual environment:**
-   ```bash
-   py -3.11 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate     # Windows
-   ```
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Launch the App:**
-   ```bash
-   streamlit run app.py
-   ```
-5. **Upload Data:** Use the sidebar to upload an ED log CSV and utilize the Volume Slicer to adjust the Flow Map.
+### 📈 Capacity Planning & Alerts
+- **Hourly congestion heatmap** (top 12 transitions): distinguishes systemic process failures from shift-change handoff delays
+- **Scenario simulation**: bootstrap-resampled from actual LOS data. Projects how a target efficiency gain shifts the distribution and reduces extended stays (> 8 hrs). Includes financial impact estimate.
+- **Statistical anomaly detection**: flags visits exceeding Mean + 2 SD on any single wait step, with a per-visit Root Cause Analysis timeline
 
 ---
 
+## Technical Architecture
 
-## 🎯 Key Features
+```
+data/event_log_ED_MMA_2026.csv
+         │
+         ▼
+load_and_preprocess()          # deduplication, triage mapping, admission flag,
+         │                     # step duration, time features
+         ▼
+compute_visit_metrics()        # visit-level KPIs: LOS, door-to-triage,
+         │                     # door-to-physician, LWBS detection
+         ▼
+Streamlit 4-tab UI             # filters → tab renders → plotly charts
+         │
+         ├── Sankey / Bottleneck (networkx-free — built from transition counts)
+         ├── ML pipeline (pd.get_dummies → RandomForest → roc_auc_score)
+         └── Bootstrap simulation (np.random.choice from real LOS data)
+```
 
-### 1. Dynamic Flow Discovery & Volume Slicing
-* **Directly-Follows Graph (DFG):** Visualizes the clinical journey with **dynamic line scaling** mapped to real-time patient volume. 
-* **Spatial Logic:** Uses force-directed mapping where node proximity represents the statistical frequency of transitions, making the "Main Highway" of the ED immediately visible.
-* **Interactive Volume Slicer:** Allows leads to filter out rare deviations to focus on high-traffic systemic bottlenecks.
-
-### 2. Protocol Conformance & "The Golden Rule"
-* **Robust Subsequence Logic:** Monitors compliance against the clinical gold standard: **Triage → Registration → Assessment → Discharge**.
-* **Noise-Resistant Validation:** The algorithm validates chronological milestones even when intermediate clinical steps (labs, vitals, imaging) occur, ensuring accurate reporting without failing visits due to "messy" real-world data.
-
-### 3. Physical Zone Load Distribution
-* **Resource Mapping:** Visualizes real-time patient distribution across physical ED sectors (e.g., Fast Track, Acute Care, Main Triage).
-* **Operational Balancing:** Identifies physical overcrowding, providing a data-driven basis for the immediate redistribution of nursing staff between zones.
-
-### 4. 6-Factor Predictive Admission Analytics
-* **Random Forest Engine:** An advanced AI model analyzing six distinct variables: **Age, Triage Level, Arrival Hour, Gender, Assigned Zone, and Step Complexity**.
-* **Inpatient Forecasting:** Identifies the primary drivers influencing admission probability to help inpatient wards prepare for bed demand 4–6 hours in advance.
-
-### 5. Comparative Monte Carlo Simulation
-* **Dual-Distribution Forecasting:** Uses **Stochastic Logic** to overlay current **Baseline** performance against an **Improved** target state across 1,000 simulated visits.
-* **Impact Analysis:** Projects how efficiency gains shift the LOS bell curve and explicitly calculates the reduction in "Tail Risk" (dangerously long stays exceeding 8 hours).
-
-### 6. Temporal Efficiency & Red Flag Alerts
-* **Hourly Delay Heatmap:** A 24-hour heatmap identifying peak congestion windows for specific process handoffs, allowing for surgical precision in swing-shift staffing.
-* **Statistical Anomaly Detection:** Automatically flags visits exceeding **Mean + 2 Standard Deviations**, providing a direct clinical audit trail for Root Cause Analysis (RCA).
+**Key design decisions:**
+- Uses `visit_id` from the source data as the primary visit key (no fragile timestamp-based reconstruction)
+- `pd.get_dummies` instead of `LabelEncoder` — avoids ordinal-coding error in tree-based models
+- `@st.cache_data` on both preprocessing functions — data only re-loaded when the file changes
+- Bootstrap resampling for simulation preserves the real shape of the LOS distribution
 
 ---
 
-## 📁 Data Disclaimer
-Due to PHI (Protected Health Information) privacy constraints, the original event log is not included in this repository. Users may test the application using their own anonymized ED event log formatted according to the technical schema provided above.
+## Data Schema
+
+| Column | Type | Description |
+|---|---|---|
+| `visit_id` | string | Unique ED visit identifier |
+| `patient_id` | string | Patient identifier |
+| `timestamp` | datetime | Event timestamp (`YYYY-MM-DD HH:MM:SS`) |
+| `event` | string | Clinical step (e.g., Triage, Assessment, Discharge) |
+| `triage_code` | int (1–5) | Acuity level per CTAS |
+| `initial_zone` | string | Physical ED zone assigned at arrival |
+| `disposition_code` | int | Outcome code (7 = inpatient admit) |
+| `disposition_desc` | string | Outcome description |
+| `age` | int | Patient age |
+| `gender` | string | Patient gender |
 
 ---
 
-## ✅ Notes
-* **Purpose:** This tool is designed for demonstration and MMA portfolio purposes to showcase the intersection of process mining, data engineering, and clinical decision support.
-* **Business Impact:** By identifying even a modest 10% efficiency gain via the Monte Carlo simulation, an average ED could potentially reduce total patient "wait-hours" by hundreds of hours per week, directly impacting LWBS (Left Without Being Seen) rates and patient satisfaction.
+## Installation & Usage
+
+### Prerequisites
+- Python 3.9+
+- `pip`
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/HzyBetty/project_process_mining.git
+cd project_process_mining
+
+# (Recommended) Create a virtual environment
+python -m venv venv
+venv\Scripts\activate      # Windows
+# source venv/bin/activate # macOS / Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Launch the dashboard
+streamlit run app.py
+```
+
+The app auto-loads `data/event_log_ED_MMA_2026.csv` on startup. Use the sidebar upload widget to override with a different dataset.
+
+---
+
+## Triage Benchmark Reference (CTAS)
+
+| Level | Category | Door-to-Triage Target |
+|---|---|---|
+| L1 | Resuscitation | Immediate (0 min) |
+| L2 | Emergent | ≤ 15 min |
+| L3 | Urgent | ≤ 30 min |
+| L4 | Less Urgent | ≤ 60 min |
+| L5 | Non-Urgent | ≤ 120 min |
+
+---
+
+## Data Privacy
+
+The bundled dataset (`data/`) is anonymised and contains no Protected Health Information (PHI). All patient identifiers are synthetic. The tool is designed for demonstration and portfolio purposes.
+
+---
+
+## Tech Stack
+
+| Layer | Libraries |
+|---|---|
+| App framework | Streamlit 1.31+ |
+| Data processing | pandas, numpy |
+| Visualisation | Plotly (Express + Graph Objects) |
+| Machine learning | scikit-learn (RandomForest, AUC-ROC) |
+| Simulation | NumPy bootstrap resampling |

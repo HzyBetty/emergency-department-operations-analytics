@@ -1,62 +1,114 @@
 ===========================================================
-USER GUIDE: ED Triage Intelligence & Flow Optimization Tool
+ ED Flow Intelligence — User Guide
+ Emergency Department Process Mining & Analytics Platform
 ===========================================================
 
 1. OVERVIEW
 -----------
-This application is a decision-support tool for ED Triage Leads. 
-It uses Process Mining to map patient flow, Machine Learning to 
-predict admissions, and Monte Carlo simulations to model 
-efficiency gains.
+This platform converts raw ED event logs into four categories
+of operational insight, accessible through a four-tab dashboard:
 
-2. INSTALLATION (Technical Setup)
----------------------------------
-To run this app, you must have Python 3.9 or higher installed.
+  Tab 1 · Executive Overview    — KPI scorecards and system status
+  Tab 2 · Patient Flow          — Sankey pathway map and bottleneck analysis
+  Tab 3 · Risk & Admission      — ML-based admission prediction and zone analysis
+  Tab 4 · Capacity Planning     — Hourly heatmap, scenario simulation, anomaly alerts
 
-Step A: Create a virtual environment (Recommended)
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
 
-Step B: Install Dependencies
-   Run the following command to install all required libraries:
-   pip install -r requirements.txt
+2. INSTALLATION
+---------------
+Requirements: Python 3.9 or higher
 
-3. RUNNING THE APPLICATION
---------------------------
-1. Open your terminal or command prompt.
-2. Navigate to the folder containing 'app.py'.
-3. Execute the following command:
-   streamlit run app.py
-4. Your default web browser will open a new tab with the dashboard.
+  Step 1 — Create and activate a virtual environment (recommended):
+    python -m venv venv
+    venv\Scripts\activate           # Windows
+    source venv/bin/activate        # macOS / Linux
 
-4. DATA REQUIREMENTS
---------------------
-The app requires a CSV file with the following column headers:
-- patient_id: Unique identifier for each patient.
-- timestamp: The date/time of the event (YYYY-MM-DD HH:MM:SS).
-- event: The clinical step (e.g., Triage, Registration, Assessment).
-- triage_code: Numerical urgency level (1-5).
-- initial_zone: The area of the ED (e.g., Zone A, Fast Track).
-- disposition_desc: Outcome (must contain 'Admit' for ML features).
+  Step 2 — Install dependencies:
+    pip install -r requirements.txt
 
-5. HOW TO USE THE DASHBOARD
----------------------------
-- STEP 1 (Upload): Use the sidebar to upload your Event Log CSV.
-- STEP 2 (Filter): Select specific Triage Levels in the sidebar 
-  to isolate high-acuity patient data.
-- STEP 3 (Analyze Flow): Hover over the Process Map (Section 1) 
-  to see volumes. Check Section 2 for safety protocol breaches.
-- STEP 4 (Load Balance): In Section 3, view the Heatmap to 
-  ensure 'Immediate' patients are not stuck in 'High Wait' zones.
-- STEP 5 (Simulate): Use the slider in Section 5 to see how 
-  reducing delays by a specific % would change your total ED stay.
-- STEP 6 (Intervene): Use Section 6 to pick specific 'Red Flag' 
-  patients for immediate clinical review.
+  Step 3 — Launch the app:
+    streamlit run app.py
+
+  The app opens automatically in your browser at http://localhost:8501
+
+
+3. DATA REQUIREMENTS
+---------------------
+The app auto-loads the bundled file in the /data folder.
+To use your own data, upload it via the sidebar.
+
+Required CSV columns:
+  visit_id          Unique ED visit identifier
+  patient_id        Patient identifier
+  timestamp         Event datetime (YYYY-MM-DD HH:MM:SS)
+  event             Clinical step name (e.g., Triage, Assessment, Discharge)
+  triage_code       Acuity level (1 = most urgent, 5 = least urgent)
+  initial_zone      Physical ED zone assigned at arrival
+  disposition_code  Outcome code (code 7 = inpatient admission)
+  disposition_desc  Outcome description text
+  age               Patient age (integer)
+  gender            Patient gender
+
+Standard event names expected by the pathway diagram:
+  Ambulance Arrival, Ambulance Transfer, Triage, Registration,
+  Assessment, Consult Request, Consult Arrival, Discharge, Left ED
+
+
+4. HOW TO USE EACH TAB
+------------------------
+
+TAB 1 — EXECUTIVE OVERVIEW
+  · The status banner at the top shows OPTIMAL / ELEVATED / CRITICAL
+    based on median Length of Stay (LOS).
+  · Use the five KPI cards to assess overall ED performance at a glance.
+  · The LOS box plot shows variation within each triage level — wider
+    boxes in L1/L2 indicate high-acuity bed-management risk.
+  · The LWBS rate (Left Without Being Seen) highlights patient safety
+    and revenue risk by triage level.
+
+TAB 2 — PATIENT FLOW & BOTTLENECKS
+  · Adjust the "Minimum pathway volume" slider to filter out rare
+    transitions and focus on the main patient highway.
+  · Red branches in the Sankey diagram indicate LWBS patients.
+  · The bottleneck bar chart ranks transitions by average wait time.
+    Use the "Full detail" expander to see 90th-percentile delays.
+  · The Door-to-Triage chart compares performance against CTAS benchmarks.
+    Red bars = accreditation gaps requiring targeted intervention.
+
+TAB 3 — RISK & ADMISSION ANALYTICS
+  · The feature importance chart shows which factors most predict admission.
+  · AUC-ROC above 0.75 confirms the model is operationally useful.
+  · Use the High-Risk Visit Flag List to initiate early bed booking for
+    patients with predicted admission probability ≥ 70%.
+  · Compare zone volume vs. zone median LOS to identify redeployment targets.
+
+TAB 4 — CAPACITY PLANNING & ALERTS
+  · The hourly heatmap highlights chronic delay windows.
+    Horizontal bands = structural bottleneck.
+    Diagonal clusters = shift-change handoff failure.
+  · Use the efficiency slider in the simulation to model LOS targets
+    and review the projected financial impact on the right panel.
+  · The Red Flag section lists statistical outliers (Mean + 2 SD).
+    Select a visit to view the step-by-step Root Cause Analysis timeline.
+
+
+5. SIDEBAR FILTERS
+-------------------
+  · "Use bundled dataset" checkbox: auto-loads /data/event_log_ED_MMA_2026.csv.
+    Uncheck to upload a custom CSV.
+  · "Triage Level" multiselect: filter all tabs to a specific acuity group.
+    Useful when presenting L1/L2 (high-acuity) analysis to clinical leadership.
+
 
 6. TROUBLESHOOTING
-------------------
-- "IndexError": Ensure your triage levels follow the "Number - Name" 
-  format or use the automated mapping built into the app.
-- "Blank Screen": Check the terminal for errors; ensure your 
-  CSV columns match the requirements in Section 4.
+-------------------
+  · Blank screen after upload: Check that your CSV column names match
+    exactly those listed in Section 3.
+  · ML model warning: The model requires at least 50 visits with at
+    least two distinct outcome values (admitted / not admitted).
+  · "No transitions meet the minimum volume threshold": Lower the slider
+    in Tab 2. This occurs when filtering to a small triage subset.
+  · CTAS benchmark chart is empty: Ensure "Triage" events exist in the
+    data and that triage_code values are numeric (1–5).
+
 ===========================================================
