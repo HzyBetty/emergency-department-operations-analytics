@@ -97,7 +97,7 @@ Streamlit 4-tab UI             # filters → tab renders → plotly charts
 
 ```bash
 # Clone the repository
-git clone https://github.com/HzyBetty/project_process_mining.git
+git clone http://github.com/HzyBetty/project_process_mining.git
 cd project_process_mining
 
 # (Recommended) Create a virtual environment
@@ -125,6 +125,18 @@ The app auto-loads `data/event_log_ED_MMA_2026.csv` on startup. Use the sidebar 
 | L3 | Urgent | ≤ 30 min |
 | L4 | Less Urgent | ≤ 60 min |
 | L5 | Non-Urgent | ≤ 120 min |
+
+---
+
+## Repository Contents
+
+| File / Folder | Description |
+|---|---|
+| `app.py` | Main Streamlit dashboard application |
+| `data/event_log_ED_MMA_2026.csv` | Bundled anonymised ED event log (16,011 visits, 90,965 events) |
+| `REPORT.md` | Full analytics report — findings, recommendations, and methodology narrative |
+| `user_guide.txt` | Per-tab walkthrough for dashboard users |
+| `requirements.txt` | Python dependency list |
 
 ---
 

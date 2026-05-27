@@ -498,7 +498,7 @@ with tab2:
         fig_sankey.update_layout(
             height=540,
             margin=dict(t=20, b=20, l=10, r=10),
-            font=dict(size=13, color="#333"),
+            font=dict(size=15, color="#0d0d0d", family="Arial Black, Arial, sans-serif"),
         )
         st.plotly_chart(fig_sankey, use_container_width=True)
         st.markdown(
